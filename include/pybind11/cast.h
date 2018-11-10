@@ -571,7 +571,17 @@ public:
         // Lazy allocation for unallocated values:
         if (vptr == nullptr) {
             auto *type = v_h.type ? v_h.type : typeinfo;
-            vptr = type->operator_new(type->type_size);
+            if (type->operator_new) {
+                vptr = type->operator_new(type->type_size);
+            } else {
+                #if defined(PYBIND11_CPP17)
+                    if (type->type_align > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+                        vptr = ::operator new(type->type_size,
+                                              (std::align_val_t) type->type_align);
+                    else
+                #endif
+                vptr = ::operator new(type->type_size);
+            }
         }
         value = vptr;
     }
@@ -1614,8 +1624,9 @@ template <typename Return, typename SFINAE = void> struct return_value_policy_ov
 template <typename Return> struct return_value_policy_override<Return,
         detail::enable_if_t<std::is_base_of<type_caster_generic, make_caster<Return>>::value, void>> {
     static return_value_policy policy(return_value_policy p) {
-        return !std::is_lvalue_reference<Return>::value && !std::is_pointer<Return>::value
-            ? return_value_policy::move : p;
+        return !std::is_lvalue_reference<Return>::value &&
+               !std::is_pointer<Return>::value
+                   ? return_value_policy::move : p;
     }
 };
 
