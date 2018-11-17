@@ -114,7 +114,7 @@ public:
             cal.tm_mday  = PyDateTime_GET_DAY(src.ptr());
             cal.tm_mon   = PyDateTime_GET_MONTH(src.ptr()) - 1;
             cal.tm_year  = PyDateTime_GET_YEAR(src.ptr()) - 1900;
-            cal.tm_isdst = -1;
+            cal.tm_isdst = 0;
 
             value = system_clock::from_time_t(std::mktime(&cal)) + microseconds(PyDateTime_DATE_GET_MICROSECOND(src.ptr()));
             return true;
@@ -131,7 +131,7 @@ public:
         std::time_t tt = system_clock::to_time_t(src);
         // this function uses static memory so it's best to copy it out asap just in case
         // otherwise other code that is using localtime may break this (not just python code)
-        std::tm localtime = *std::localtime(&tt);
+        std::tm localtime = *std::gmtime(&tt);
 
         // Declare these special duration types so the conversions happen with the correct primitive types (int)
         using us_t = duration<int, std::micro>;
